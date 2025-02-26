@@ -37,6 +37,7 @@ class ResettableTimer:
         """
         self.timeout = timeout
         self.callback = callback
+
         self.timer = Timer(self.timeout, self.callback_wrapper)
         self.lock = Lock()
 
@@ -64,6 +65,7 @@ class ResettableTimer:
                 self.timer.cancel()
             self.timer = Timer(self.timeout, self.callback_wrapper)
             self.timer.start()
+
 
     def execute_and_reset(self) -> None:
         """

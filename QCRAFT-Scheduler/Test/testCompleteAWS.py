@@ -17,17 +17,17 @@ urls = {
     "full_adder": "https://raw.githubusercontent.com/jorgecs/CompositionCircuits/main/circuits_braket/full_adder.py",
     "grover": "https://raw.githubusercontent.com/jorgecs/CompositionCircuits/main/circuits_braket/grover.py",
     "kickback": "https://raw.githubusercontent.com/jorgecs/CompositionCircuits/main/circuits_braket/kickback.py",
-    "phase_estimation": "https://raw.githubusercontent.com/jorgecs/CompositionCircuits/main/circuits_braket/phase_estimation.py",
-    "qaoa": "https://raw.githubusercontent.com/jorgecs/CompositionCircuits/main/circuits_braket/qaoa.py",
-    "qft": "https://raw.githubusercontent.com/jorgecs/CompositionCircuits/main/circuits_braket/qft.py",
-    "qwalk": "https://raw.githubusercontent.com/jorgecs/CompositionCircuits/main/circuits_braket/qwalk.py",
-    "shor": "https://raw.githubusercontent.com/jorgecs/CompositionCircuits/main/circuits_braket/shor.py",
-    "simon": "https://raw.githubusercontent.com/jorgecs/CompositionCircuits/main/circuits_braket/simon.py",
-    "tsp": "https://raw.githubusercontent.com/jorgecs/CompositionCircuits/main/circuits_braket/tsp.py"
+    #"phase_estimation": "https://raw.githubusercontent.com/jorgecs/CompositionCircuits/main/circuits_braket/phase_estimation.py",
+   # "qaoa": "https://raw.githubusercontent.com/jorgecs/CompositionCircuits/main/circuits_braket/qaoa.py",
+    #"qft": "https://raw.githubusercontent.com/jorgecs/CompositionCircuits/main/circuits_braket/qft.py",
+    #"qwalk": "https://raw.githubusercontent.com/jorgecs/CompositionCircuits/main/circuits_braket/qwalk.py",
+   # "shor": "https://raw.githubusercontent.com/jorgecs/CompositionCircuits/main/circuits_braket/shor.py",
+   # "simon": "https://raw.githubusercontent.com/jorgecs/CompositionCircuits/main/circuits_braket/simon.py",
+   # "tsp": "https://raw.githubusercontent.com/jorgecs/CompositionCircuits/main/circuits_braket/tsp.py"
 }
 
 for elem in urls:
-    data = {"url":urls[elem] ,"shots" : 10000, "policy":"time"}
+    data = {"url":urls[elem] ,"shots" : 1000, "policy":"time"}
     print(requests.post(url+pathCircuit, json = data).text)
 
 
