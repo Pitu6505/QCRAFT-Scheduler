@@ -13,7 +13,7 @@ from typing import Optional
 import braket
 import numpy as np
 
-def code_to_circuit_aws(self, code_str:str) -> braket.circuits.circuit.Circuit: #Inverse parser to get the circuit object from the string
+def code_to_circuit_aws(code_str:str) -> braket.circuits.circuit.Circuit: #Inverse parser to get the circuit object from the string
     """
     Transforms a string representation of a circuit into a Braket circuit.
 

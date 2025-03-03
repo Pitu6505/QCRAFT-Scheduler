@@ -91,13 +91,12 @@ class SchedulerPolicies:
             unscheduler (str): The URL of the unscheduler
         """
         self.app = app
-        self.time_limit_seconds = 100
-        self.max_qubits = 10
+        self.time_limit_seconds = 90
+        self.max_qubits = 38
         self.forced_threshold = 12
-        self.machine_ibm = 'ibm_brisbane'
-        self.machine_aws = 'local'
+        self.machine_ibm = 'local' #'ibm_brisbane'
+        self.machine_aws = 'local' #'arn:aws:braket:::device/quantum-simulator/amazon/sv1'
         self.executeCircuitIBM = executeCircuitIBM()
-
         # Cargar modelo de ML si existe, sino entrenarlo
         self.model = SeleccionadorNN(input_dim=2, hidden_dim=16)
 
@@ -276,7 +275,7 @@ class SchedulerPolicies:
             provider (str): The provider of the circuit
         """
         composition_qubits = 0
-        for url, num_qubits, shots, user, circuit_name, depth, _ in urls:
+        for url, num_qubits, shots, user, circuit_name, depth in urls:  #Aqui he cambiado algo
         #Change the q[...] and c[...] to q[composition_qubits+...] and c[composition_qubits+...]
             if 'algassert' in url: 
                 # Send a request to the translator, in the post, the field url will be url and the field d will be composition_qubits
@@ -406,11 +405,6 @@ class SchedulerPolicies:
 
         # 3. Selección de circuitos usando ML o incluyendo todos si caben
         total_qb = sum(item[1] for item in formatted_queue)
-        #if total_qb <= max_qubits:
-            #print("📌 Todos los elementos caben en la capacidad. Se seleccionan todos.")
-           # seleccionados = formatted_queue
-           # nueva_cola = []
-        #else:
         seleccionados, _, nueva_cola = optimizar_espacio_ml(self.model, formatted_queue, max_qubits, self.forced_threshold)
 
         #print(f"✅ Elementos seleccionados: {seleccionados}")

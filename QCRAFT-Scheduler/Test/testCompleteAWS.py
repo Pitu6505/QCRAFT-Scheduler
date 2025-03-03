@@ -27,7 +27,7 @@ urls = {
 }
 
 for elem in urls:
-    data = {"url":urls[elem] ,"shots" : 1000, "policy":"time"}
+    data = {"url":urls[elem] ,"shots" : 1000, "policy":"Optimizacion_ML"}
     print(requests.post(url+pathCircuit, json = data).text)
 
 
