@@ -19,7 +19,7 @@ import torch.nn as nn
 import torch.optim as optim
 import torch.utils.data
 import threading
-from typing import Callable
+from typing import Callable, Iterator
 import time
 from qiskit_ibm_runtime import SamplerV2 as Sampler, QiskitRuntimeService
 import qiskit.providers
@@ -91,10 +91,10 @@ class SchedulerPolicies:
             unscheduler (str): The URL of the unscheduler
         """
         self.app = app
-        self.time_limit_seconds = 90
-        self.max_qubits = 38
+        self.time_limit_seconds = 10
+        self.max_qubits = 127
         self.forced_threshold = 12
-        self.machine_ibm = 'local' #'ibm_brisbane'
+        self.machine_ibm =  'ibm_brisbane' #''local'
         self.machine_aws = 'local' #'arn:aws:braket:::device/quantum-simulator/amazon/sv1'
         self.executeCircuitIBM = executeCircuitIBM()
         # Cargar modelo de ML si existe, sino entrenarlo
@@ -116,8 +116,8 @@ class SchedulerPolicies:
                         'depth': Policy(self.send_depth, self.max_qubits, self.time_limit_seconds, self.executeCircuit, self.machine_aws, self.machine_ibm),
                         'shots_depth': Policy(self.send_shots_depth, self.max_qubits, self.time_limit_seconds, self.executeCircuit, self.machine_aws, self.machine_ibm),
                         'shots_optimized': Policy(self.send_shots_optimized, self.max_qubits, self.time_limit_seconds, self.executeCircuit, self.machine_aws, self.machine_ibm),
-                        'Optimizacion_ML': Policy(self.send_ML, self.max_qubits, 30, self.executeCircuit, self.machine_aws, self.machine_ibm),
-                        'Optimizacion_PD': Policy(self.send_PD, self.max_qubits, 30 , self.executeCircuit, self.machine_aws, self.machine_ibm),}
+                        'Optimizacion_ML': Policy(self.send_ML, self.max_qubits, self.time_limit_seconds, self.executeCircuit, self.machine_aws, self.machine_ibm),
+                        'Optimizacion_PD': Policy(self.send_PD, self.max_qubits, self.time_limit_seconds , self.executeCircuit, self.machine_aws, self.machine_ibm),}
         
         self.translator = f"http://{self.app.config['TRANSLATOR']}:{self.app.config['TRANSLATOR_PORT']}/code/"
         self.unscheduler = f"http://{self.app.config['HOST']}:{self.app.config['PORT']}/unscheduler"
@@ -275,7 +275,7 @@ class SchedulerPolicies:
             provider (str): The provider of the circuit
         """
         composition_qubits = 0
-        for url, num_qubits, shots, user, circuit_name, depth in urls:  #Aqui he cambiado algo
+        for url, num_qubits, shots, user, circuit_name, depth, Iterator in urls:  #Aqui he cambiado algo
         #Change the q[...] and c[...] to q[composition_qubits+...] and c[composition_qubits+...]
             if 'algassert' in url: 
                 # Send a request to the translator, in the post, the field url will be url and the field d will be composition_qubits
@@ -384,6 +384,8 @@ class SchedulerPolicies:
         asegurando que no se envíen circuitos si la cola de IBM ya tiene 3 o más trabajos en espera.
         """
         print("Ejecutando política ML...")
+        start_time = time.process_time()  # Iniciar el timer
+
 
         if not queue:
             print("⚠️ La cola está vacía, deteniendo temporizador.")
@@ -407,7 +409,9 @@ class SchedulerPolicies:
         total_qb = sum(item[1] for item in formatted_queue)
         seleccionados, _, nueva_cola = optimizar_espacio_ml(self.model, formatted_queue, max_qubits, self.forced_threshold)
 
-        #print(f"✅ Elementos seleccionados: {seleccionados}")
+        max_qbits = sum(item[1] for item in seleccionados)
+        print(f"✅ Elementos seleccionados en ML: {seleccionados}")
+        print(f"🔢 Suma total de qubits seleccionados: {max_qbits}")
 
         # 4. Si no hay elementos seleccionados, detenemos la ejecución
         if not seleccionados:
@@ -437,15 +441,35 @@ class SchedulerPolicies:
             print(f"⚠️ ERROR: Estos elementos NO se eliminaron correctamente: {elementos_restantes}")
 
         # **9. Ejecutar los circuitos seleccionados en un solo hilo para evitar concurrencia descontrolada**
+        """
         if urls_for_create:
             code, qb = [], []
             shotsUsr = [item[2] for item in urls_for_create]
             self.create_circuit(urls_for_create, code, qb, provider)
             data = {"code": code}
 
-            thread = threading.Thread(target=executeCircuit, args=(json.dumps(data), qb, shotsUsr, provider, urls_for_create, machine))
-            thread.start()
-            thread.join()  # Esperar a que termine antes de continuar
+            Thread(target=executeCircuit, args=(json.dumps(data), qb, shotsUsr, provider, urls_for_create, machine)).start()"""
+        
+        end_time = time.process_time()  # Finalizar el timer
+        elapsed_time = end_time - start_time  # Calcular el tiempo transcurrido
+        print(f"Tiempo de ejecución de send: {elapsed_time:.6f} segundos en ML")
+
+        #ids.append(id) # TODO if the file is not edited here and the machine crashes before all threads finish, it could potentially lead to data duplication. However, editing the file only once (after thread.join) is more efficient
+        with open("./SalidaML.txt", 'a') as file:
+            file.write("Cola Formateada:")
+            file.write(str(formatted_queue))
+            file.write("\n")
+            file.write("Cola Seleccionada:")
+            file.write(str(seleccionados))
+            file.write("\n")
+            file.write("Qbits alcanzados: ")
+            file.write(str(max_qbits))  
+            file.write("\n")
+            file.write("Tiempo Ejecucion:")
+            file.write(str(elapsed_time))
+            file.write("\n")
+
+
 
         # **10. Verificar si la cola está vacía antes de reiniciar el temporizador**
         if not queue:
@@ -460,6 +484,8 @@ class SchedulerPolicies:
         Ejecuta la política de optimización basada en Programacion Dinamica.
         """
         print("Ejecutando política Programación Dinamica...")
+        start_time = time.process_time()  # Iniciar el timer
+
 
         if not queue:
             print("⚠️ La cola está vacía, deteniendo temporizador.")
@@ -476,7 +502,7 @@ class SchedulerPolicies:
 
         # 1. Formatear la cola para ML
         formatted_queue = [(str(user), num_qubits, iteracion) for (circuit, num_qubits, shots, user, circuit_name, maxDepth, iteracion) in queue]
-        # print(f"📌 Cola formateada para ML: {formatted_queue}")
+        print(f"📌 Cola formateada para PD: {formatted_queue}")
 
 
         # 2. Selección de circuitos usando ML o incluyendo todos si caben
@@ -487,8 +513,11 @@ class SchedulerPolicies:
          #   nueva_cola = []
         # else:
         seleccionados, _, nueva_cola = optimizar_espacio_dinamico( formatted_queue, max_qubits, self.forced_threshold)
+        
+        max_qbits = sum(item[1] for item in seleccionados)
+        print(f"✅ Elementos seleccionados en PD: {seleccionados}")
+        print(f"🔢 Suma total de qubits seleccionados: {max_qbits}")
 
-        # print(f"✅ Elementos seleccionados: {seleccionados}")
 
         # 3. Si no hay elementos seleccionados, detenemos la ejecución
         if not seleccionados:
@@ -502,7 +531,7 @@ class SchedulerPolicies:
 
         # 5. Filtrar los circuitos completos correspondientes a los IDs seleccionados
         seleccionados_completos = [item for item in queue if str(item[3]) in seleccionados_ids]
-        # print(f"🚀 Elementos seleccionados completos: {seleccionados_completos}")
+        # print(f"🚀 Elementos seleccionados completos PD: {seleccionados_completos}")
 
         # 6. Formatear los datos para create_circuit
         urls_for_create = [(circuit, num_qubits, shots, user, circuit_name, maxDepth) for (circuit, num_qubits, shots, user, circuit_name, maxDepth, iteracion) in seleccionados_completos]
@@ -518,15 +547,32 @@ class SchedulerPolicies:
             print(f"⚠️ ERROR: Estos elementos NO se eliminaron correctamente: {elementos_restantes}")
 
         # **8. Ejecutar los circuitos seleccionados en un solo hilo para evitar concurrencia descontrolada**
+        """
         if urls_for_create:
             code, qb = [], []
             shotsUsr = [item[2] for item in urls_for_create]
             self.create_circuit(urls_for_create, code, qb, provider)
             data = {"code": code}
 
-            thread = threading.Thread(target=executeCircuit, args=(json.dumps(data), qb, shotsUsr, provider, urls_for_create, machine), daemon=True)
-            thread.start()
-            thread.join()  # Esperar a que termine antes de continuar
+
+            Thread(target=executeCircuit, args=(json.dumps(data), qb, shotsUsr, provider, urls_for_create, machine)).start()"""
+        end_time = time.process_time()  # Finalizar el timer
+        elapsed_time = end_time - start_time  # Calcular el tiempo transcurrido
+        print(f"Tiempo de ejecución de send: {elapsed_time:.6f} segundos")
+
+        with open("./SalidaPD.txt", 'w') as file:
+            file.write("Cola Formateada:")
+            file.write(str(formatted_queue))
+            file.write("\n")
+            file.write("Cola Seleccionada:")
+            file.write(str(seleccionados))
+            file.write("\n")
+            file.write("Qbits alcanzados: ")
+            file.write(str(max_qbits))  
+            file.write("\n")
+            file.write("Tiempo Ejecucion:")
+            file.write(str(elapsed_time))
+            file.write("\n")
 
         # **9. Verificar si la cola está vacía antes de reiniciar el temporizador**
         if not queue:
@@ -672,6 +718,9 @@ class SchedulerPolicies:
             executeCircuit (Callable): The function to execute the circuit            
             machine (str): The machine to execute the circuit
         """
+        start_time = time.process_time()  # Iniciar el timer
+
+
         if len(queue) != 0:
             print('Sent')
             urls = []
@@ -683,11 +732,28 @@ class SchedulerPolicies:
                     sumQb += url[1]
                     queue.remove(url)
             code,qb = [],[]
+            print("sumQb", sumQb)
             shotsUsr = [10000] * len(urls)
             #shotsUsr = [url[2] for url in urls] # Each url will have its own number of shots, a statistic will be used to get the results after
             self.create_circuit(urls,code,qb,provider)
             data = {"code":code}
-            Thread(target=executeCircuit, args=(json.dumps(data),qb,shotsUsr,provider,urls,machine)).start()
+
+            """
+            Thread(target=executeCircuit, args=(json.dumps(data),qb,shotsUsr,provider,urls,machine)).start()"""
+
+            end_time = time.process_time()  # Finalizar el timer
+            elapsed_time = end_time - start_time  # Calcular el tiempo transcurrido
+            print(f"Tiempo de ejecución de send: {elapsed_time:.6f} segundos en Tiempo")
+
+        with open("./SalidaTime.txt", 'w') as file:
+            file.write("Suma de qBits:")
+            file.write(str(sumQb))
+            file.write("\n")
+            file.write("Tiempo Ejecucion:")
+            file.write(str(elapsed_time))
+            file.write("\n")
+
+
             #executeCircuit(json.dumps(data),qb,shotsUsr,provider,urls)
             self.services['time'].timers[provider].reset()
 

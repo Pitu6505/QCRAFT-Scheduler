@@ -1,12 +1,11 @@
-import requests
-import random
-
+import aiohttp
+import asyncio
 url = 'http://localhost:8082/'
+
 pathURL = 'url'
 pathResult = 'result'
 pathCircuit = 'circuit'
 
-ids = []
 
 urls = {
     "Combinational-Mapping-1": "https://raw.githubusercontent.com/Qcraft-UEx/QCRAFT-Scheduler/main/circuits-code//combinational/mapping/20QBT_16CYC_32GN_1.0P2_0_vq.py",
@@ -84,35 +83,30 @@ urls = {
     "vqe-2": "https://raw.githubusercontent.com/Qcraft-UEx/QCRAFT-Scheduler/main/circuits-code//variational/vqe/vqe_indep_4_mqt.py",
     "vqe-3": "https://raw.githubusercontent.com/Qcraft-UEx/QCRAFT-Scheduler/main/circuits-code//variational/vqe/vqe_indep_5_mqt.py",
     "vqe-4": "https://raw.githubusercontent.com/Qcraft-UEx/QCRAFT-Scheduler/main/circuits-code//variational/vqe/vqe_indep_6_mqt.py",
+#   la composicion 4 es desde Reversible-3 hasta vqe-4 sin las dynamic. La composicion 5 es de todos los dynamic
 }
 
-# Número de URLs a seleccionar aleatoriamente
-x = 200  # Puedes cambiar este valor al número que desees
+async def post_request(session, url, data):
+    async with session.post(url, json=data) as response:
+        return await response.text()
 
-policies = ["Optimizacion_ML", "Optimizacion_PD", "time"]
+async def main():
+    data_template = {
+        "url": "",
+        "shots": 10000,
+        "provider": ['ibm'],
+        "policy": "Optimizacion_PD"
+    }
+    async with aiohttp.ClientSession() as session:
+        tasks = []
+        for name, url_value in urls.items():
+            data = data_template.copy()
+            data["url"] = url_value
+            task = post_request(session, url + pathCircuit, data)
+            tasks.append(task)
+            
+        responses = await asyncio.gather(*tasks)
+        for response in responses:
+            print(response)
 
-
-selected_urls = random.choices(list(urls.items()), k=x)
-
-# Envío de las solicitudes
-for name, link in selected_urls:
-    for policy in policies:
-        data = {"url": link, "shots": 10000, "policy": policy}
-        response = requests.post(url + pathCircuit, json=data)
-        print(f"{name} ({policy}): {response.text}")
-    
-
-
-
-
-
-
-
-"""
-for elem in urls:
-    data = {"url":urls[elem] ,"shots" : 10000, "policy":"Optimizacion_ML"}
-    print(elem+":"+requests.post(url+pathCircuit, json = data).text)
-    """
-
-
-
+asyncio.run(main())
