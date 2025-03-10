@@ -2,12 +2,9 @@ import requests
 import random
 
 url = 'http://localhost:8082/'
-pathURL = 'url'
-pathResult = 'result'
 pathCircuit = 'circuit'
 
-ids = []
-
+# Lista de URLs de circuitos
 urls = {
     "Combinational-Mapping-1": "https://raw.githubusercontent.com/Qcraft-UEx/QCRAFT-Scheduler/main/circuits-code//combinational/mapping/20QBT_16CYC_32GN_1.0P2_0_vq.py",
     "Combinational-Mapping-2": "https://raw.githubusercontent.com/Qcraft-UEx/QCRAFT-Scheduler/main/circuits-code//combinational/mapping/20QBT_4CYC_8GN_1.0P2_0_vq.py",
@@ -86,9 +83,17 @@ urls = {
     "vqe-4": "https://raw.githubusercontent.com/Qcraft-UEx/QCRAFT-Scheduler/main/circuits-code//variational/vqe/vqe_indep_6_mqt.py",
 }
 
+# Políticas a las que se enviarán las solicitudes
+policies = ["Optimizacion_ML", "Optimizacion_PD", "time"]
 
-for elem in urls:
-        data = {"url":urls[elem] ,"shots" : 10000, "policy":"Optimizacion_ML"}
-        print(elem+":"+requests.post(url+pathCircuit, json = data).text)
+# Número de veces que se enviarán peticiones (con repetición)
+num_requests = 50
 
-
+for _ in range(num_requests):
+    # Seleccionar un circuito aleatorio (puede repetirse)
+    elem = random.choice(list(urls.keys()))
+    
+    for policy in policies:
+        data = {"url": urls[elem], "shots": 10000, "policy": policy}
+        response = requests.post(url + pathCircuit, json=data)
+        print(f"{elem} [{policy}]: {response.text}")

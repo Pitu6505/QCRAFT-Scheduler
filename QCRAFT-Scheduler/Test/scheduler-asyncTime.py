@@ -1,12 +1,11 @@
-import requests
-import random
-
+import aiohttp
+import asyncio
 url = 'http://localhost:8082/'
+
 pathURL = 'url'
 pathResult = 'result'
 pathCircuit = 'circuit'
 
-ids = []
 
 urls = {
     "Combinational-Mapping-1": "https://raw.githubusercontent.com/Qcraft-UEx/QCRAFT-Scheduler/main/circuits-code//combinational/mapping/20QBT_16CYC_32GN_1.0P2_0_vq.py",
@@ -84,11 +83,30 @@ urls = {
     "vqe-2": "https://raw.githubusercontent.com/Qcraft-UEx/QCRAFT-Scheduler/main/circuits-code//variational/vqe/vqe_indep_4_mqt.py",
     "vqe-3": "https://raw.githubusercontent.com/Qcraft-UEx/QCRAFT-Scheduler/main/circuits-code//variational/vqe/vqe_indep_5_mqt.py",
     "vqe-4": "https://raw.githubusercontent.com/Qcraft-UEx/QCRAFT-Scheduler/main/circuits-code//variational/vqe/vqe_indep_6_mqt.py",
+#   la composicion 4 es desde Reversible-3 hasta vqe-4 sin las dynamic. La composicion 5 es de todos los dynamic
 }
 
+async def post_request(session, url, data):
+    async with session.post(url, json=data) as response:
+        return await response.text()
 
-for elem in urls:
-        data = {"url":urls[elem] ,"shots" : 10000, "policy":"Optimizacion_ML"}
-        print(elem+":"+requests.post(url+pathCircuit, json = data).text)
+async def main():
+    data_template = {
+        "url": "",
+        "shots": 10000,
+        "provider": ['ibm'],
+        "policy": "time"
+    }
+    async with aiohttp.ClientSession() as session:
+        tasks = []
+        for name, url_value in urls.items():
+            data = data_template.copy()
+            data["url"] = url_value
+            task = post_request(session, url + pathCircuit, data)
+            tasks.append(task)
+            
+        responses = await asyncio.gather(*tasks)
+        for response in responses:
+            print(response)
 
-
+asyncio.run(main())

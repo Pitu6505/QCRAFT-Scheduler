@@ -1,0 +1,4 @@
+Suma de qBits:126
+Tiempo Ejecucion:0.0
+Suma de qBits:106
+Tiempo Ejecucion:0.0
