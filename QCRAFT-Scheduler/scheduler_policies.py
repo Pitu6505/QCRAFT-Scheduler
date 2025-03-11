@@ -91,7 +91,7 @@ class SchedulerPolicies:
             unscheduler (str): The URL of the unscheduler
         """
         self.app = app
-        self.time_limit_seconds = 300
+        self.time_limit_seconds = 20
         self.max_qubits = 127
         self.forced_threshold = 12
         self.machine_ibm =  'ibm_brisbane' #''local'
@@ -158,7 +158,7 @@ class SchedulerPolicies:
         if not self.services[service_name].timers[provider].is_alive():
             self.services[service_name].timers[provider].start()
         n_qubits = sum(item[1] for item in self.services[service_name].queues[provider])
-        if  n_qubits >= self.max_qubits and (service_name != 'Optimizacion_ML' and service_name != 'Optimizacion_PD' and service_name != 'time'):
+        if  n_qubits >= self.max_qubits and (service_name != 'Optimizacion_ML' and service_name != 'Optimizacion_PD'):
             self.services[service_name].timers[provider].execute_and_reset()
         return 'Data received', 200
         
