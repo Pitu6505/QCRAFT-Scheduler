@@ -429,7 +429,15 @@ class SchedulerPolicies:
         urls_for_create = [(circuit, num_qubits, shots, user, circuit_name, maxDepth) for (circuit, num_qubits, shots, user, circuit_name, maxDepth, iteracion) in seleccionados_completos]
 
         # **8. Eliminar de la cola ANTES de ejecutar `executeCircuit`**
-        queue[:] = [item for item in queue if str(item[3]) not in seleccionados_ids]
+      # 8. Actualizar la cola: eliminar elementos procesados y aumentar la prioridad de los que no se procesaron
+        queue[:] = [
+            (circuit, num_qubits, shots, user, circuit_name, maxDepth, iteracion + 1)
+            for (circuit, num_qubits, shots, user, circuit_name, maxDepth, iteracion) in queue
+                if str(user) not in seleccionados_ids
+
+        # queue[:] = [item for item in queue if str(item[3]) not in seleccionados_ids]
+
+]
         #print(f"🔄 Cola actualizada después de eliminación: {queue}")
 
         # **Verificar si los elementos realmente se eliminaron**
@@ -535,8 +543,11 @@ class SchedulerPolicies:
         # print(f"📌 URLs para create_circuit: {urls_for_create}")
 
         # **7. Eliminar de la cola ANTES de ejecutar `executeCircuit`**
-        queue[:] = [item for item in queue if str(item[3]) not in seleccionados_ids]
-        # print(f"🔄 Cola actualizada después de eliminación: {queue}")
+        queue[:] = [
+            (circuit, num_qubits, shots, user, circuit_name, maxDepth, iteracion + 1)
+            for (circuit, num_qubits, shots, user, circuit_name, maxDepth, iteracion) in queue
+                if str(user) not in seleccionados_ids]
+        #queue[:] = [item for item in queue if str(item[3]) not in seleccionados_ids]
 
         # **Verificar si los elementos realmente se eliminaron**
         elementos_restantes = [item for item in queue if str(item[3]) in seleccionados_ids]
